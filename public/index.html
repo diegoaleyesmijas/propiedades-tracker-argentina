@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Propiedades Tracker</title>
+<style>
+:root{--bg:#0f1115;--card:#171a21;--bord:#252a35;--txt:#e6e9ef;--mut:#8b93a5;--green:#2ecc71;--red:#e74c3c;--blue:#3498db;--gray:#555c6b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,-apple-system,sans-serif}
+header{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 20px;border-bottom:1px solid var(--bord);position:sticky;top:0;background:var(--bg);z-index:5}
+h1{font-size:18px;margin:0 10px 0 0}
+input,select,button,textarea{font:inherit;color:inherit;background:#1e222b;border:1px solid var(--bord);border-radius:8px;padding:8px 10px}
+button{cursor:pointer}
+button:hover{background:#262b36}
+main{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;padding:20px}
+.card{background:var(--card);border:1px solid var(--bord);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.card.descartada{opacity:.55;filter:grayscale(.6)}
+.card.descartada .thumb{box-shadow:inset 0 0 0 4px var(--red)}
+.card img{width:100%;height:190px;object-fit:cover;background:#0b0d11;display:block}
+.num{display:grid;place-items:center;height:190px;background:#0b0d11;color:var(--mut);font-size:40px}
+.body{padding:12px 14px;display:flex;flex-direction:column;gap:8px;flex:1}
+.titulo{font-weight:600;font-size:15px}
+.meta{display:flex;gap:10px;color:var(--mut);font-size:13px;flex-wrap:wrap}
+.meta b{color:var(--txt);font-weight:600}
+a.link{color:var(--blue);text-decoration:none;font-size:12px;word-break:break-all}
+.notas{width:100%;min-height:52px;resize:vertical;background:#12151b;font-size:13px}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+select.estado{font-size:13px;padding:5px 8px;border-radius:6px}
+select[data-e="interes"]{border-color:var(--gray)}
+select[data-e="visitada"]{border-color:var(--blue);color:var(--blue)}
+select[data-e="descartada"]{border-color:var(--red);color:var(--red)}
+.badge{font-size:11px;padding:2px 8px;border-radius:99px;background:#1e222b;color:var(--mut)}
+.badge.visitada{color:var(--blue)}
+.badge.descartada{color:var(--red)}
+.badge.interes{color:var(--green)}
+.fecha{font-size:11px;color:var(--mut);margin-top:auto}
+.tools{display:flex;gap:6px;margin-left:auto}
+.mini{padding:4px 8px;font-size:12px;border-radius:6px}
+dialog{background:var(--card);color:var(--txt);border:1px solid var(--bord);border-radius:12px;padding:20px;min-width:320px}
+dialog::backdrop{background:#000a}
+form{display:flex;flex-direction:column;gap:10px}
+form input,form textarea{width:100%}
+.ok{color:var(--green)}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏠 Propiedades Tracker</h1>
+  <input id="q" type="search" placeholder="Buscar… (titulo, nota, tag)" style="min-width:220px">
+  <select id="estado">
+    <option value="todas">Todas</option>
+    <option value="interes">🟢 Interesa</option>
+    <option value="visitada">🔵 Visitada</option>
+    <option value="descartada">🔴 Descartada</option>
+  </select>
+  <select id="tag">
+    <option value="">Todos los tags</option>
+  </select>
+  <label style="color:var(--mut);font-size:13px">Orden:
+    <select id="orden"><option value="fecha">Más nuevas</option><option value="precio">Precio ↑</option></select>
+  </label>
+  <button class="mini" id="addBtn">＋ Agregar</button>
+  <button class="mini" id="bkBtn">📌 Bookmarklet</button>
+</header>
+<main id="grid"></main>
+
+<dialog id="dlgAdd">
+  <h3>Agregar propiedad</h3>
+  <form id="fAdd">
+    <input name="url" placeholder="URL * (link del portal)" required>
+    <input name="titulo" placeholder="Título">
+    <input name="precio" placeholder="Precio">
+    <div class="row"><input name="m2" placeholder="m²" style="flex:1"><input name="ambientes" placeholder="Ambientes" style="flex:1"></div>
+    <input name="direccion" placeholder="Dirección / barrio">
+    <input name="foto_url" placeholder="URL de foto (opcional)">
+    <textarea name="notas" placeholder="Notas"></textarea>
+    <input name="tags" placeholder="tags, separados, por coma">
+    <div class="row"><button type="submit" class="ok">Guardar</button><button type="button" onclick="dlgAdd.close()">Cancelar</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlgBk">
+  <h3>Bookmarklet — capturar desde el portal</h3>
+  <p style="color:var(--mut)">1. Arrastrá este botón a tu barra de marcadores:<br><br>
+  2. Cuando estés viendo una propiedad en Zonaprop / IOL / Argenprop, clic en el marcador → la guarda acá con título, precio, foto y link.</p>
+  <p><a class="bk" href="#" onclick="return false" style="display:inline-block;background:#2ecc71;color:#000;padding:10px 18px;border-radius:8px;font-weight:700;text-decoration:none">＋ Guardar en Tracker</a></p>
+  <button onclick="dlgBk.close()">Cerrar</button>
+</dialog>
+
+<script>
+const API='/api/propiedades';
+const ESTADOS=['interes','visitada','descartada'];
+let all=[];
+
+async function load(){
+  const p=new URLSearchParams(); const q=$('#q').value.trim(), e=$('#estado').value, t=$('#tag').value;
+  if(q)p.set('q',q); if(e)p.set('estado',e); if(t)p.set('tag',t); p.set('orden',$('#orden').value);
+  all=await (await fetch(API+'?'+p)).json();
+  render();
+}
+const $=s=>document.querySelector(s);
+const esc=s=>(s??'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function render(){
+  const g=$('#grid');
+  g.innerHTML=all.map(p=>{
+    const media=p.foto_url?`<img src="${esc(p.foto_url)}" onerror="this.outerHTML='<div class=num>🏠</div>'">`:'<div class=num>🏠</div>';
+    const tags=(p.tags||'').split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="badge">${esc(t)}</span>`).join('');
+    const fecha=p.fecha_visita?`Visitada: ${p.fecha_visita.slice(0,10)}`:`Agregada: ${p.fecha_agregada.slice(0,10)}`;
+    return `<div class="card ${p.estado}" data-id="${p.id}">
+      <a href="${esc(p.url)}" target="_blank" rel="noopener">${media}</a>
+      <div class="body">
+        <div class="titulo">${esc(p.titulo)||'<i>Sin título</i>'}</div>
+        <div class="meta">
+          ${p.precio?`<span><b>${esc(p.precio)}</b></span>`:''}
+          ${p.m2?`<span><b>${esc(p.m2)}</b> m²</span>`:''}
+          ${p.ambientes?`<span><b>${esc(p.ambientes)}</b> amb</span>`:''}
+          ${p.direccion?`<span>${esc(p.direccion)}</span>`:''}
+        </div>
+        <a class="link" href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.url).slice(0,60)}…</a>
+        <div class="row">
+          <select class="estado" data-e="${p.estado}" onchange="setEstado(${p.id},this.value)">
+            <option value="interes"${p.estado==='interes'?' selected':''}>🟢 Interesa</option>
+            <option value="visitada"${p.estado==='visitada'?' selected':''}>🔵 Visitada</option>
+            <option value="descartada"${p.estado==='descartada'?' selected':''}>🔴 Descartada</option>
+          </select>
+          ${ESTADOS.includes(p.estado)&&p.estado!=='interes'?`<span class="badge ${p.estado}">${p.estado}</span>`:''}
+          ${tags}
+          <span class="tools"><button class="mini" onclick="del(${p.id})">🗑</button></span>
+        </div>
+        <textarea class="notas" placeholder="Notas…" onchange="setNotas(${p.id},this.value)">${esc(p.notas)}</textarea>
+        <div class="fecha">${fecha}</div>
+      </div>
+    </div>`;
+  }).join('')||'<p style="color:var(--mut);grid-column:1/-1">Sin propiedades. Tocá ＋ Agregar o usá el bookmarklet desde el portal.</p>';
+  // tags para el filtro
+  const set=new Set(); all.forEach(p=>(p.tags||'').split(',').forEach(t=>t.trim()&&set.add(t.trim())));
+  $('#tag').innerHTML='<option value="">Todos los tags</option>'+[...set].map(t=>`<option${$('#tag').value===t?' selected':''}>${esc(t)}</option>`).join('');
+}
+
+async function setEstado(id,e){ await fetch(`${API}/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({estado:e},e==='visitada'?{fecha_visita:new Date().toISOString().slice(0,10)}:{}))}); load(); }
+async function setNotas(id,v){ await fetch(`${API}/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({notas:v})}); }
+async function del(id){ if(!confirm('¿Eliminar esta propiedad?'))return; await fetch(`${API}/${id}`,{method:'DELETE'}); load(); }
+
+$('#q').oninput=()=>{clearTimeout(window._t);window._t=setTimeout(load,300)};
+$('#estado').onchange=load; $('#tag').onchange=load; $('#orden').onchange=load;
+$('#addBtn').onclick=()=>dlgAdd.showModal();
+$('#bkBtn').onclick=()=>dlgBk.showModal();
+$('#fAdd').onsubmit=async ev=>{ev.preventDefault();const f=new FormData(ev.target);const b={};f.forEach((v,k)=>b[k]=v);
+  await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+  dlgAdd.close(); ev.target.reset(); load();};
+
+// bookmarklet generado con la URL actual
+const BK=`javascript:(function(){d=document;fetch('${location.origin}/api/propiedades',{method:'POST',headers:{'Content-Type':'application/json'},mode:'cors',body:JSON.stringify({url:location.href.split('?')[0]===location.href?location.href:location.href,titulo:(d.querySelector('meta[property=\"og:title\"]')||{}).content||d.title,precio:(d.querySelector('[class*=price],[itemprop=price]')||{}).textContent||(d.body.textContent.match(/\\$\\s?[\\d.,]+/)||[''])[0],foto_url:(d.querySelector('meta[property=\"og:image\"]')||{}).content||'',origen:location.hostname})}).then(r=>r.json()).then(j=>alert(j.id?'✅ Guardada en el tracker':'⚠️ '+JSON.stringify(j))).catch(e=>alert('Error: '+e.message))})()`;
+document.querySelector('.bk').href=BK;
+
+load();
+</script>
+</body>
+</html>
