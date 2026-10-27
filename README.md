@@ -40,18 +40,32 @@ Acceso desde otra PC de la red: `http://192.168.1.15:3000` (IP local; si cambia,
 | GET | `/api/propiedades` | listar (filtros: `q`, `estado`, `tag`, `orden=precio`) |
 | POST | `/api/propiedades` | crear/actualizar por URL |
 | PATCH | `/api/propiedades/:id` | actualizar estado/notas/tags/… |
+| POST | `/api/propiedades/:id/foto` | subir captura (dataURL base64, comprimida en el cliente) |
+| GET | `/api/propiedades/:id/foto` | bajar la captura guardada |
 | DELETE | `/api/propiedades/:id` | borrar |
 
 ## Estructura
-- `index.js` — servidor Express + API REST
-- `db.js` — SQLite (tabla `propiedades` + migraciones), datos en `./data` (DB en `./data/propiedades.db`, capturas en `./data/uploads/`)
+- `index.js` — servidor Express + API (escucha local; exportado para serverless)
+- `store.js` — capa de datos unificada: `@libsql/client` (Turso) si hay `TURSO_DATABASE_URL`, si no `better-sqlite3` local
 - `public/` — dashboard (vanilla JS, sin build)
+- `api/index.js` + `vercel.json` — entrypoint serverless para Vercel
+
+## Deploy en Vercel + Turso (online, gratis)
+Vercel no tiene disco, por eso la DB y las capturas viven en **Turso** (libSQL compatible con SQLite, plan gratis generoso).
+
+1. **Turso:** `https://portal.turso.net` → crear DB (ej: `propiedades`) → copiar `URL` y crear `token`
+2. **Import a Git Repository** con este repo desde https://vercel.com/new
+3. En **Environment Variables** pegar:
+   - `TURSO_DATABASE_URL` = la URL de Turso (`libsql://propiedades-....turso.io`)
+   - `TURSO_AUTH_TOKEN` = el token generado
+4. Deploy. La app queda en `https://<algo>.vercel.app`
+
+El mismo código en tu máquina **sigue andando en SQLite local** (sin env vars) — la app local y el despliegue de Vercel son dos bases de datos independientes. Dashboard, API y lógica son idénticos.
 
 ## Deploy en Render
 1. https://dashboard.render.com → **New + → Blueprint** → elegir este repo
-2. Acepta automáticamente `render.yaml` (crea el servicio y el disco persistente montado en `/data`)
-3. **Importante:** los discos persistentes requieren plan **Starter (USD 7/mes)** — en el plan free los datos se pierden en cada reinicio. Si querés 100% gratis: Fly.io con un volume de 1GB (workspace free)
-4. Una vez deployada, abrí la URL pública y generá el 📌 Bookmarklet desde ahí para usarla desde cualquier PC
+2. Acepta automáticamente `render.yaml` (crea el servicio y el disco persistente montado en `/data`) — en el plan Starter (USD 7/mes)
+3. Alternativa 100% gratis: Vercel + Turso (arriba)
 
 ## Datos
 La base SQLite vive en `data/propiedades.db` (no va a git). Backup: copiar ese archivo.
