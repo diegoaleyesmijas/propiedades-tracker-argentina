@@ -18,6 +18,15 @@ npm install
 npm start        # http://localhost:3000
 ```
 
+## Arranque automático (esta máquina)
+Servicio systemd de usuario, ya instalado en `~/.config/systemd/user/` con **linger** (arranca al prender la máquina, sin abrir sesión):
+```bash
+systemctl --user status propiedades-tracker    # estado
+systemctl --user restart propiedades-tracker   # reiniciar
+journalctl --user -u propiedades-tracker -f    # logs
+```
+Acceso desde otra PC de la red: `http://192.168.1.15:3000` (IP local; si cambia, actualizar).
+
 ## Bookmarklet
 1. Abrí la app → botón **📌 Bookmarklet**
 2. Arrastrá el botón verde **"＋ Guardar en Tracker"** a la barra de marcadores
