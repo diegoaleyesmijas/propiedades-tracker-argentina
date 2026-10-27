@@ -75,6 +75,14 @@ if (process.env.TURSO_DATABASE_URL) {
       await c.execute(`UPDATE propiedades SET visitada = 1, estado = 'interes' WHERE estado = 'visitada' AND visitada = 0`);
     },
   };
+} else if (process.env.VERCEL) {
+  // serverless sin config: no explotar al cargar el módulo; los endpoints responderán con error claro
+  driver = {
+    kind: 'sin-configurar',
+    async all() { throw new Error('Serverless sin TURSO_DATABASE_URL/TURSO_AUTH_TOKEN: configurá las env vars en Vercel (Project Settings → Environment Variables)'); },
+    async run() { throw new Error('Serverless sin TURSO_DATABASE_URL/TURSO_AUTH_TOKEN: configurá las env vars en Vercel (Project Settings → Environment Variables)'); },
+    async plan() { /* sin-op: la app levanta, la API reclama config con mensaje claro */ },
+  };
 } else {
   const better = require('better-sqlite3');
   const path = require('path');
