@@ -38,5 +38,11 @@ npm start        # http://localhost:3000
 - `db.js` — SQLite (tabla `propiedades` + migraciones), datos en `./data` (DB en `./data/propiedades.db`, capturas en `./data/uploads/`)
 - `public/` — dashboard (vanilla JS, sin build)
 
+## Deploy en Render
+1. https://dashboard.render.com → **New + → Blueprint** → elegir este repo
+2. Acepta automáticamente `render.yaml` (crea el servicio y el disco persistente montado en `/data`)
+3. **Importante:** los discos persistentes requieren plan **Starter (USD 7/mes)** — en el plan free los datos se pierden en cada reinicio. Si querés 100% gratis: Fly.io con un volume de 1GB (workspace free)
+4. Una vez deployada, abrí la URL pública y generá el 📌 Bookmarklet desde ahí para usarla desde cualquier PC
+
 ## Datos
 La base SQLite vive en `data/propiedades.db` (no va a git). Backup: copiar ese archivo.

@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: propiedades-tracker
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: node index.js
+    healthCheckPath: /api/propiedades
+    envVars:
+      - key: DATA_DIR
+        value: /data
+    disk:
+      name: tracker-data
+      mountPath: /data
+      sizeGB: 1
