@@ -28,4 +28,15 @@ CREATE TABLE IF NOT EXISTS propiedades (
 );
 `);
 
+// migraciones simples: agregar columnas si faltan
+function addCol(name, ddl) {
+  const cols = db.prepare(`PRAGMA table_info(propiedades)`).all().map(c => c.name);
+  if (!cols.includes(name)) db.exec(`ALTER TABLE propiedades ADD COLUMN ${ddl}`);
+}
+addCol('expensas', `expensas TEXT`);
+addCol('visitada', `visitada INTEGER DEFAULT 0`);
+
+// migrar estado viejo "visitada" a la nueva dimensión separada
+db.exec(`UPDATE propiedades SET visitada = 1, estado = 'interes' WHERE estado = 'visitada' AND visitada = 0`);
+
 module.exports = db;
