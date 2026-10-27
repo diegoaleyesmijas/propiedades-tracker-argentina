@@ -61,7 +61,18 @@ if (process.env.TURSO_DATABASE_URL) {
       return { id: Number(rs.lastInsertRowid) };
     },
     async plan() {
-      await c.execute(SCHEMA);
+      for (const stmt of SCHEMA.split(';').map(s => s.trim()).filter(Boolean)) {
+        await c.execute(stmt);
+      }
+      await this.migrateTurso(c);
+    },
+    async migrateTurso(c) {
+      const cols = (await c.execute('PRAGMA table_info(propiedades)')).rows.map(x => x.name);
+      for (const k of MIGRATIONS_KEYS) {
+        const ddl = addCol(cols, k, MIGRATIONS_DDL[k]);
+        if (ddl) await c.execute(ddl);
+      }
+      await c.execute(`UPDATE propiedades SET visitada = 1, estado = 'interes' WHERE estado = 'visitada' AND visitada = 0`);
     },
   };
 } else {
