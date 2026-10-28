@@ -130,15 +130,32 @@ function where(q, estado, tag, visited) {
   return { sql, params };
 }
 
+const numberish = (s) => {
+  if (!s) return null;
+  const digits = String(s).replace(/[^\d.,]/g, '').replace(/\./g, '').replace(/,/g, '.');
+  const n = parseFloat(digits);
+  return Number.isFinite(n) ? n : null;
+};
+
 const store = {
   kind: driver.kind,
 
   async list({ q, estado, tag, visited, orden } = {}) {
     let { sql, params } = where(q, estado, tag, visited);
-    if (orden === 'precio') sql += " ORDER BY CAST(REPLACE(REPLACE(precio, '.', ''), '$', '') AS INTEGER) ASC";
-    else sql += ' ORDER BY id DESC';
-    const rows = await driver.all(sql, params);
-    return rows.map(row => ({ ...row, foto_blob: undefined })); // no mandar el blob pesado en listados
+    sql += ' ORDER BY id DESC';
+    const out = (await driver.all(sql, params)).map(row => ({ ...row, foto_blob: undefined }));
+    // orden por precio en JS: soporta "$120.000", "USD 150,5mm", nulls al final
+    if (orden === 'precio' || orden === 'precio_desc') {
+      const dir = orden === 'precio_desc' ? -1 : 1;
+      out.sort((a, b) => {
+        const na = numberish(a.precio), nb = numberish(b.precio);
+        if (na === null && nb === null) return b.id - a.id;
+        if (na === null) return 1;  // sin precio al final
+        if (nb === null) return -1;
+        return dir * (na - nb) || (b.id - a.id);
+      });
+    }
+    return out;
   },
 
   async get(id) {

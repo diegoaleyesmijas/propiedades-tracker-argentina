@@ -93,6 +93,37 @@ form input,form textarea{width:100%}
 .empty{text-align:center;color:var(--mut);grid-column:1/-1;padding:60px 0}
 .edit-link{background:transparent;border:1px dashed var(--border)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ===== Responsive ===== */
+@media (max-width: 820px){
+  header{padding:10px 14px;gap:8px}
+  h1{font-size:16px;margin-right:4px}
+  #q{flex:1 1 100%;max-width:none;min-width:0}
+  header select{font-size:13px;padding:7px 8px}
+  .quick{padding:12px 14px 0}
+  main{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px;padding:14px}
+}
+@media (max-width: 560px){
+  header{position:static;padding:10px 12px}
+  h1{width:100%;margin:0 0 2px}
+  header select{flex:1 1 44%;min-width:0}
+  header label{width:100%;color:var(--mut);font-size:12px}
+  header label select{flex:1}
+  .quick{flex-direction:column}
+  .quick button{width:100%;padding:11px}
+  main{grid-template-columns:1fr;gap:12px;padding:12px}
+  .thumbwrap img,.thumbwrap .placeholder{height:220px}
+  .precio{font-size:18px}
+  .expensas{font-size:12px}
+  .card{border-radius:12px}
+  .body{padding:11px 12px;gap:8px}
+  /* targets de toque cómodos */
+  .estado-toggle button{padding:9px 13px;font-size:13.5px}
+  .vis-toggle{padding:9px 12px}
+  .notas{min-height:60px}
+  dialog{inset:auto 6px 6px 6px}
+}
+
 </style>
 </head>
 <body>
@@ -110,10 +141,10 @@ form input,form textarea{width:100%}
     <option value="1">Visitada</option>
     <option value="0">No visitada</option>
   </select>
-  <select id="tag"><option value="">Todos los tags</option></select>
   <label style="color:var(--mut);font-size:13px;display:inline-flex;gap:6px;align-items:center">Orden
-    <select id="orden"><option value="fecha">Más nuevas</option><option value="precio">Precio ↑</option></select>
+    <select id="orden"><option value="fecha">Más nuevas</option><option value="precio">Precio ↑</option><option value="precio_desc">Precio ↓</option></select>
   </label>
+  <select id="tag"><option value="">Todos los tags</option></select>
   <button class="mini" id="addBtn">＋ Agregar ficha</button>
   <button class="mini" id="bkBtn">📌 Bookmarklet</button>
 </header>
