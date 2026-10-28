@@ -148,6 +148,7 @@ const store = {
 
   async upsert(b) {
     if (!b.url) throw new Error('falta url');
+    if (!/^https?:\/\//.test(b.url)) throw new Error('la URL debe empezar por http:// o https://');
     const existing = await driver.all('SELECT id FROM propiedades WHERE url = ?', [b.url]);
     if (existing.length) {
       const id = existing[0].id;

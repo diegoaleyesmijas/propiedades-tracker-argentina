@@ -244,6 +244,7 @@ function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show'
 async function save(id,fields){
   const r=await fetch(`${API}/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(fields)});
   if(r.ok){const u=await r.json();const i=all.findIndex(x=>x.id===id);if(i>-1)all[i]=u;}
+  else toast('⚠️ No se guardó: '+(await r.json().catch(()=>({}))).error);
 }
 async function setEstado(id,e){await save(id,{estado:e});render();}
 async function setVis(id,v){await save(id,{visitada:v?1:0,fecha_visita:v?new Date().toISOString().slice(0,10):null});if(v)toast('✔ Marcada como visitada');render();}
@@ -276,6 +277,7 @@ document.addEventListener('mouseover',e=>{const c=e.target.closest?.('.card');if
 
 /* comprimir imagen en canvas y subir */
 async function uploadFoto(id,blob){
+  toast('Subiendo captura…');
   try{
     const maxSide=1400, quality=.82;
     const bmp=await createImageBitmap(blob);
@@ -285,7 +287,8 @@ async function uploadFoto(id,blob){
     canvas.getContext('2d').drawImage(bmp,0,0,canvas.width,canvas.height);
     const dataUrl=canvas.toDataURL('image/jpeg',quality);
     const r=await fetch(`${API}/${id}/foto`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:dataUrl})});
-    if(r.ok){toast('📸 Captura pegada');load();}else toast('No se pudo guardar la captura');
+    const j=await r.json().catch(()=>({}));
+    if(r.ok){toast('📸 Captura pegada');load();}else toast('⚠️ '+trunc(j.error||'No se pudo guardar la captura'));
   }catch(e){toast('No se pudo procesar la captura: '+e.message);}
 }
 
@@ -293,10 +296,16 @@ async function uploadFoto(id,blob){
 async function quickAdd(){
   const url=$('#quickUrl').value.trim();
   if(!/^https?:\/\//.test(url)){toast('Eso no parece una URL (http…)');return;}
-  const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
-  $('#quickUrl').value='';
-  if(r.ok){toast('✔ Ficha creada — abrí el aviso y pegale captura cuando quieras');load();}
+  try{
+    const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+    const j=await r.json().catch(()=>({error:'Respuesta no JSON del servidor'}));
+    if(!r.ok){toast('⚠️ '+trunc(j.error||('Error HTTP '+r.status)));return;}
+    $('#quickUrl').value='';
+    toast(j.updated?'✔ Ficha existente actualizada':'✔ Ficha creada — abrí el aviso y pegale captura cuando quieras');
+    load();
+  }catch(e){toast('⚠️ Sin respuesta del servidor: '+e.message);}
 }
+const trunc=s=>String(s).slice(0,140);
 $('#quickBtn').onclick=quickAdd;
 $('#quickUrl').addEventListener('keydown',e=>{if(e.key==='Enter')quickAdd();});
 
