@@ -142,7 +142,15 @@ const store = {
 
   async list({ q, estado, tag, visited, orden } = {}) {
     let { sql, params } = where(q, estado, tag, visited);
-    sql += ' ORDER BY id DESC';
+    if (orden === 'precio' || orden === 'precio_desc') {
+      sql += ' ORDER BY id DESC';
+    } else {
+      // relevancia: favoritas arriba, luego interes/sin definir; descartadas siempre al fondo; por fecha de subida dentro de cada grupo (las últimas primero)
+      sql += ` ORDER BY (CASE WHEN estado = 'descartada' THEN 1 ELSE 0 END) ASC,
+                       (CASE WHEN estado = 'favorita' THEN 0 ELSE 1 END) ASC,
+                       id DESC`;
+      sql = sql.replace(/\s+/g, ' ');
+    }
     const out = (await driver.all(sql, params)).map(row => ({ ...row, foto_blob: undefined }));
     // orden por precio en JS: soporta "$120.000", "USD 150,5mm", nulls al final
     if (orden === 'precio' || orden === 'precio_desc') {
